@@ -3,9 +3,8 @@
 
 # NUMERICAL MODEL OF TRAIN
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# author: Petr Čech
 #
-# Zdroje:
+# Links:
 # http://www.atlaslokomotiv.net/loko-470.html
 # http://www.vagony.cz
 # http://homen.vsb.cz/~s1i95/mvd/mvd_tah.htm
