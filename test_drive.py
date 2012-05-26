@@ -9,7 +9,7 @@ import train.drive
 def main():
 
 
-	route = train.route.RailRoute('path.dat')
+	route = train.route.RailRoute('data/sample_A.route')
 	drive_unit = train.drive.DriveUnit()
 	drive_unit.run(route)
 
