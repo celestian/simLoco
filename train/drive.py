@@ -24,7 +24,6 @@ class DriveUnit():
 	Elementary physics needed to ride the train
 	'''
 
-
 	def __init__ (self):
 
 		self.maxspeed = 140		# [km/h]
@@ -51,19 +50,20 @@ class DriveUnit():
 #-------------------------------------------------------------------------------
 #	F O R C E S
 
-	# 
-
 	def adhesion (self, velocity):
 		'''
-		Estimate of adhesion by Kothera
+		Estimate of adhesion 
 		http://homen.vsb.cz/~s1i95/mvd/mvd_tah.htm
 	
 		IN: velocity [km/h]
 		OUT: adhesion coefficient [-]
 		'''
+		# Kother
+#		return (9000.0/(math.fabs(velocity)+42.0) + 116.0)*0.001
 
-		return (9000.0/(math.fabs(velocity)+42.0) + 116.0)*0.001
-		
+		# Curtius-Kniffler
+		return (7500.0/(math.fabs(velocity)+44.0) + 161.0)*0.001
+
 		
 	def dragForce (self, velocity):
 		'''
@@ -83,8 +83,10 @@ class DriveUnit():
 		IN: position m]
 		OUT: slope drag force [N]
 		'''
-		
-		return self.weight * 9.81 * self.route.getSlope(position)	
+		if (position == -1):
+			return 0.0
+		else:
+			return self.weight * 9.81 * self.route.getSlope(position)
 	
 		
 	def engineForce (self, velocity):
@@ -98,7 +100,7 @@ class DriveUnit():
 		# Have you ever tried to divide by zero? (Well the case of velocity = 0
 		# would be a different formula, but at the moment it is unknown.)
 		U = velocity
-		if (velocity < 0.01): U = 1.0
+		if (velocity < 20.0): U = 20.0
 
 		return (3600 * self.power * self.adhesion(velocity))/U
 
@@ -126,15 +128,22 @@ class DriveUnit():
 		IN: speed [km/h]
 		OUT: distace [m]
 		'''
+		dt = 0.25
+		vA = speed
+		xA = 0.0
+		while (vA > 0):
+			vB = vA + 3.6*self.deltaVelocity(dt, vA, -1, -1)	# [km/h]
+			aB = (vB-vA)/(3.6*dt)										# [m/s^2]
+			xB = (dt*vB)/3.6 + xA										# [m]
+			vA = vB
+			xA = xB	
+		return xB
 
-		if (speed < 60):  return 400
-		if (speed < 100): return 700
-		if (speed < 160): return 1000
+#		if (speed < 60):  return 400
+#		if (speed < 100): return 700
+#		if (speed < 160): return 1000
 
 		# Note: The speed limit on Czech railways is 160 km/h
-		print ('The specified speed exceeds the maximum design speed of the track.')
-
-		return 1000
 	
 	
 	def decelerationDistance (self, speedA, speedB):
@@ -145,22 +154,22 @@ class DriveUnit():
 		OUT: distance [m]
 		'''
 		
-		if (speedA < 160): a = 0.987654321
-		if (speedA < 100): a = 0.551146384
-		if (speedA < 60):  a = 0.347222222
-		
-		speedA = speedA / 3.6
-		speedB = speedB / 3.6
-		
-		# ToDo: Write a test for speedA > speedB
-			
-		return (speedA*(speedA-speedB)/a)-((speedA-speedB)*(speedA-speedB)/(2*a))
+		dt = 0.25
+		vA = speedA
+		xA = 0.0
+		while (vA > speedB):
+			vB = vA + 3.6*self.deltaVelocity(dt, vA, -1, -1)	# [km/h]
+			aB = (vB-vA)/(3.6*dt)										# [m/s^2]
+			xB = (dt*vB)/3.6 + xA										# [m]
+			vA = vB
+			xA = xB	
+		return xB
 
 		
 #-------------------------------------------------------------------------------
 #	M O T I O N
 
-	def eqMotion (self, velocity, distance):
+	def eqMotion (self, velocity, mode, distance):
 		'''
 		Differential equation of motion
 
@@ -170,13 +179,16 @@ class DriveUnit():
 		Note: distance is only parameter for slope
 		'''
 		
-		engine = self.engineForce(velocity)
+		# ToDo: NEW VARIABLE MODE
+		
+		engine = lambda mode, velocity: self.engineForce(velocity) if mode == 1 else 0.0
+		brake = lambda mode, velocity: self.brakeForce(velocity) if mode == -1 else 0.0
 		drag  = self.dragForce(velocity) + self.slopeDragForce(distance)
 		
-		return (engine-drag)/(1000*(2.0*self.weight+self.rho_d))
+		return (engine(mode, velocity) - brake(mode, velocity) - drag)/(1000*(2.0*self.weight+self.rho_d))
 
 
-	def deltaVelocity (self, dt, vA, distance):
+	def deltaVelocity (self, dt, vA, mode, distance):
 		'''
 		4th-order Runge–Kutta method
 		http://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods
@@ -188,10 +200,10 @@ class DriveUnit():
 		out: delta v [m/s]
 		'''
 		
-		rkA = self.eqMotion (vA, distance)
-		rkB = self.eqMotion (vA + (0.5 * rkA), distance)
-		rkC = self.eqMotion (vA + (0.5 * rkB), distance)
-		rkD = self.eqMotion (vA + rkC, distance)
+		rkA = self.eqMotion (vA, mode, distance)
+		rkB = self.eqMotion (vA + (0.5 * rkA), mode, distance)
+		rkC = self.eqMotion (vA + (0.5 * rkB), mode, distance)
+		rkD = self.eqMotion (vA + rkC, mode, distance)
 
 		return (rkA + 2.0*rkB + 2.0*rkC + rkD)*dt/6.0
 
@@ -236,7 +248,7 @@ class DriveUnit():
 		
 		if (startspeed < endspeed):
 			while (xA < distance) and (vA < endspeed):
-				vB = vA + 3.6*self.deltaVelocity(dt, vA, position + xA)	# [km/h]
+				vB = vA + 3.6*self.deltaVelocity(dt, vA, 1, position + xA)	# [km/h]
 				aB = (vB-vA)/(3.6*dt)									# [m/s^2]
 				xB = (dt*vB)/3.6 + xA									# [m]
 				time = time + dt										# [s]
@@ -254,26 +266,53 @@ class DriveUnit():
 			return result				
 
 		if (startspeed > endspeed):			
-			if (startspeed < 160): a = 0.987654321
-			if (startspeed < 100): a = 0.551146384
-			if (startspeed < 60):  a = 0.347222222
+			if (endspeed != 0.0):
+				while (xA < distance) and (vA > endspeed):
+					vB = vA + 3.6*self.deltaVelocity(dt, vA, -1, position + xA)	# [km/h]
+					aB = (vB-vA)/(3.6*dt)										# [m/s^2]
+					xB = (dt*vB)/3.6 + xA										# [m]
+					time = time + dt											# [s]
+					vA = vB
+					xA = xB	
+					result.append( DriveMark(traveltime + time, position + xB, vB, aB) )
 
-			startspeed = startspeed / 3.6
-			endspeed = endspeed / 3.6
-					
-			xB = self.decelerationDistance(startspeed, endspeed)	# [m]
-			time = (startspeed - endspeed) / a						# [s]				
-			vB = endspeed * 3.6										# [km/h]
-			aB = 0													# [m/s^2]
+				if (xA < distance):
+					aB = 0.0						# [m/s^2]
+					xB = distance					# [m]
+					vB = endspeed					# [km/h]
+					time = distance/(endspeed/3.6)	# [s]				
+					result.append( DriveMark(traveltime + time, position + xB, vB, aB) )
+
+				return result
 			
-			if (endspeed != 0):
-				aB = 0.0							# [m/s^2]
-				xB = distance						# [m]
-				time = 3.6 * distance/(endspeed)	# [s]				
-									
-			result.append( DriveMark(traveltime + time, position + xB, vB, aB) )				
+			# We need to stop at the end of section!
+			else: 
+				tmp = []
+				tmp.append( DriveMark(0.0, position + distance, 0.0, 0.0) )
+				vA = 0
+				xA = 0
+				time = 0
+				while (vA < tmpspeed):
+					vB = vA + 3.6*self.deltaVelocity(-dt, vA, -1, position + distance - xA)	# [km/h]
+					aB = -(vB-vA)/(3.6*dt)										# [m/s^2]
+					xB = (dt*vB)/3.6 + xA										# [m]
+					time = time + dt													# [s]
+					vA = vB
+					xA = xB	
+					tmp.append( DriveMark(time, position + distance - xA, vB, aB) )
 
-			return result
+				if (xB < distance):
+					aB = 0.0						# [m/s^2]
+					xB = xB							# [m]
+					vB = tmpspeed					# [km/h]
+					time = xB/(vB/3.6)	# [s]				
+					result.append( DriveMark(traveltime + time, position + xB, vB, aB) )
+					
+					
+				for r in reversed (tmp):
+					result.append( DriveMark(traveltime + time - r.time, r.distance, r.speed, r.acceleration) )
+			
+				return result
 
 
 #-------------------------------------------------------------------------------		
@@ -346,8 +385,21 @@ class DriveUnit():
 			result += self.motion(position, traveltime, distance, startspeed, endspeed, tmpspeed)
 			position = position + distance
 
-		for d in result:
-			print("{:g}\t{:g}\t{:g}\t{:g}".format(d.time, d.distance, d.speed, d.acceleration))
+		return result
+
+
+#-------------------------------------------------------------------------------
+# New brake system (developing)
+
+	def brakeForce (self, velocity):
+	
+		return self.adhesion(velocity) * 9810 * self.weight
+
+
+
+
+
+
 
 
 if __name__ == "__main__":

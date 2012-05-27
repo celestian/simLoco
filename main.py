@@ -9,7 +9,7 @@
 # http://www.vagony.cz
 # http://homen.vsb.cz/~s1i95/mvd/mvd_tah.htm
 # http://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods
-#
+# http://dspace.upce.cz/bitstream/10195/32067/1/CL378.pdf
 #
 
 
