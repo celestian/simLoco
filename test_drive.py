@@ -44,7 +44,8 @@ def main():
 	os.system('gnuplot results/gnuplot.dat')
 
 
-if __name__ == "__main__" :
+
+if __name__ == "__main__":
 
 	main()
 

@@ -31,6 +31,7 @@ class DriveUnit():
 		self.edb = 1700			# [kW]
 		self.weight = 155.5		# [t] 
 		self.lenght = 79.2		# [m]
+		self.wcount = 3			# number of wagons
 
 		# ToDo: To determine the parameters directly from the specified train
 		# (need database)
@@ -118,35 +119,17 @@ class DriveUnit():
 		return self.dragForce(velocity)/self.engineForce(velocity)
 
 
+	def brakeForce (self, velocity):
+	
+		#aa = self.adhesion(velocity) * 9810 * self.weight
+		bb = (self.adhesion(velocity) * self.wcount * 200000)
+		return bb
+
+
 #-------------------------------------------------------------------------------
-# Z E R O   A P P R O X I M A T I O N   T O   T H E   B R A K E   M O D E L
+# B R A K E   U N I T
 
-	def brakingDistance (self, speed):
-		'''
-		Return braking distance
-		
-		IN: speed [km/h]
-		OUT: distace [m]
-		'''
-		dt = 0.25
-		vA = speed
-		xA = 0.0
-		while (vA > 0):
-			vB = vA + 3.6*self.deltaVelocity(dt, vA, -1, -1)	# [km/h]
-			aB = (vB-vA)/(3.6*dt)										# [m/s^2]
-			xB = (dt*vB)/3.6 + xA										# [m]
-			vA = vB
-			xA = xB	
-		return xB
-
-#		if (speed < 60):  return 400
-#		if (speed < 100): return 700
-#		if (speed < 160): return 1000
-
-		# Note: The speed limit on Czech railways is 160 km/h
-	
-	
-	def decelerationDistance (self, speedA, speedB):
+	def brakingDistance (self, speedA, speedB):
 		'''
 		Returns the distance needed to slow the speed of speedA to speedB
 		
@@ -157,6 +140,7 @@ class DriveUnit():
 		dt = 0.25
 		vA = speedA
 		xA = 0.0
+		xB = 0.0
 		while (vA > speedB):
 			vB = vA + 3.6*self.deltaVelocity(dt, vA, -1, -1)	# [km/h]
 			aB = (vB-vA)/(3.6*dt)										# [m/s^2]
@@ -241,7 +225,10 @@ class DriveUnit():
 			aB = 0.0					# [m/s^2]
 			vB = startspeed				# [km/h]
 			xB = distance				# [m]
-			time = distance/(vA/3.6)	# [s]				
+			if (vA > 0.0):
+				time = distance/(vA/3.6)	# [s]				
+			else:
+				time = 0.0
 			result.append( DriveMark(traveltime + time, position + xB, vB, aB) )
 
 			return result
@@ -335,11 +322,11 @@ class DriveUnit():
 		
 			if (speedA > speedB):
 				if (speedB == 0.0):
-					x = position - self.brakingDistance(speedA)
-					position = position - self.brakingDistance(self.route.getSpeedLimit(x))
+					x = position - self.brakingDistance(speedA, 0.0)
+					position = position - self.brakingDistance(self.route.getSpeedLimit(x), 0.0)
 				else:
-					x = position - self.decelerationDistance(speedA, speedB)
-					position = position - self.decelerationDistance(self.route.getSpeedLimit(x), speedB)
+					x = position - self.brakingDistance(speedA, speedB)
+					position = position - self.brakingDistance(self.route.getSpeedLimit(x), speedB)
 
 			tmp.append(Route.RouteMark(position, speedA, 0) )			
 			tmp.append(Route.RouteMark(position, speedB, 0) )
@@ -386,20 +373,6 @@ class DriveUnit():
 			position = position + distance
 
 		return result
-
-
-#-------------------------------------------------------------------------------
-# New brake system (developing)
-
-	def brakeForce (self, velocity):
-	
-		return self.adhesion(velocity) * 9810 * self.weight
-
-
-
-
-
-
 
 
 if __name__ == "__main__":
