@@ -70,8 +70,8 @@ class RailRoute:
 
 		return slope
 
-
-
+	
+	
 if __name__ == "__main__":
 
 	import doctest
