@@ -5,6 +5,8 @@
 import math
 import train.route
 
+from time import time
+
 
 class DriveMark:
 	'''
@@ -102,6 +104,11 @@ class DriveUnit():
 		U = velocity
 		if (velocity < 20.0): U = 20.0
 
+		# approximation to the real traction characteristics
+		for i in range (5,1,-1):
+			if (velocity > 20.0) and (velocity > self.maxspeed/i):
+				U = self.maxspeed/i
+
 		return (3600 * self.power * self.adhesion(velocity))/U
 
 
@@ -121,7 +128,7 @@ class DriveUnit():
 	def brakeForce (self, velocity):
 	
 		#aa = self.adhesion(velocity) * 9810 * self.weight
-		bb = (self.adhesion(velocity)/0.15) * self.wcount * 20000 * 0.75
+		bb = (self.adhesion(velocity)/0.15) * self.wcount * 20000
 		return bb
 
 
@@ -139,11 +146,15 @@ class DriveUnit():
 			position ... it is needed to determine the climb / descent
 		'''
 		
-		engine = lambda mode, velocity: self.engineForce(velocity) if mode == 1 else 0.0
-		brake = lambda mode, velocity: self.brakeForce(velocity) if mode == -1 else 0.0
+		if (mode == 1):
+			engine = self.engineForce(velocity)
+			brake = 0.0
+		if (mode == -1):
+			engine = 0.0
+			brake = self.brakeForce(velocity)		
 		drag  = self.dragForce(velocity) + self.slopeDragForce(route, position)
 		
-		return (engine(mode, velocity) - brake(mode, velocity) - drag)/(1000*(2.0*self.weight+self.rho_d))
+		return (engine - brake - drag)/(1000*(2.0*self.weight+self.rho_d))
 
 
 	def deltaVelocity (self, dt, vA, mode, route, position):
@@ -212,8 +223,8 @@ class DriveUnit():
 
 #-------------------------------------------------------------------------------		
 # T R A I N   D R I V E R
-
-
+		
+			
 	def deltaSpeedDistance (self, speedA, speedB, route, position):
 		'''
 		Returns the distance needed to change the speed (speedA --> speedB)
@@ -225,7 +236,7 @@ class DriveUnit():
 		OUT: distance [m]
 		'''
 		
-		dt = 0.25
+		dt = 1
 		vA = speedA
 		xA = 0.0
 		xB = 0.0
@@ -237,9 +248,9 @@ class DriveUnit():
 		else:
 			return 0	
 
-		# The lambda tests whether already achieved the required speed
-		condition = lambda mode, current, final: True if (mode * (current - final)) < 0.0 else False
-		while (condition(mode, vA, speedB)):
+
+		# Until achieved the required speed
+		while ( (mode * (vA - speedB)) < 0.0 ):
 			vB = vA + 3.6*self.deltaVelocity(dt, vA, mode, route, position)	# [km/h]
 			xB = (dt*vB)/3.6 + xA											# [m]
 			vA = vB
@@ -270,6 +281,8 @@ class DriveUnit():
 			i = 0
 			suff_distance = 0.0
 			speedC = speedA + i			
+
+#			t0 = time()	
 			while ((suff_distance < distance) and (speedC <= speedlimit)):
 				i += 0.2
 				suff_distance = 0.0
@@ -277,18 +290,86 @@ class DriveUnit():
 				result_distance = self.deltaSpeedDistance(speedA, speedC, route, position)
 				suff_distance += self.deltaSpeedDistance(speedC, speedB, route, position)
 				suff_distance += result_distance
-				
+
+#			t1 = time()
+#			print ('getOutlook:\t{:g} iterations\t{:f}s.'.format(i/0.2, t1-t0))
 			return (speedC-0.2),  result_distance
 
 		return speedA, 0.0
 
 
-	def run (self, route):
+	def funct (self, CC, speedA, speedB, distance, route, position):
+
+		currentA = self.deltaSpeedDistance(speedA, CC, route, position)
+		currentB = self.deltaSpeedDistance(CC, speedB, route, position)
+	
+		return distance - currentA - currentB			
+
+
+	def getOutlookB (self, speedA, speedB, distance, route, position):
+		'''
+		Returns the speed, distance in order to optimize the passage section
+		(type: speedA ​​> speedB, initial_speed < speedA)
+
+		IN: speedA ... initial speed [km/h]
+		speedB ... speed limit of next section [km/h]
+		distance ... lenght of current section [m]
+		route ... description of the rail route
+		position ... it is needed to determine the climb / descent [m]
+		OUT: speed [km/h], distance [m]
+				
+		Note: We would like to train first accelerated and then started to slow
+		down the speedB.
+		'''
+		speedlimit = route.getSpeedLimit(position)
+		
+		# If a sufficient distance to slow is less than the length of the section.
+		if (self.deltaSpeedDistance(speedA, speedB, route, position) < distance):
+#			t0 = time()	#--
+
+			A = speedA
+			B = speedlimit
+			fA = self.funct(A, speedA, speedB, distance, route, position)
+			fB = self.funct(B, speedA, speedB, distance, route, position)
+
+			if (fA * fB < 0):
+				for i in range(1,200):
+
+					C = (A + B)/2
+					fC = self.funct(C, speedA, speedB, distance, route, position)
+					fA = self.funct(A, speedA, speedB, distance, route, position)
+					fB = self.funct(B, speedA, speedB, distance, route, position)
+
+
+					if (fA * fC > 0.0):
+						A = C
+					if (fB * fC > 0.0):
+						B = C
+					if (fC == 0.0):
+						return C, self.deltaSpeedDistance(speedA, C, route, position)
+	
+					if (math.fabs(A - B) < 0.2):
+						break
+	
+#				t1 = time() #---
+#				print ('getOutlook:\t{:g} iterations\t{:f}s.'.format(i, t1-t0))
+				return (C),  self.deltaSpeedDistance(speedA, C, route, position)
+
+			else:
+#				print("R")
+				return speedA, distance - self.deltaSpeedDistance(speedA, speedB, route, position)
+
+		return speedA, 0.0
+
+
+	def run (self, route, funct = 'A'):
 		'''
 		Passing route
 		IN: route ... description of the rail route
 		OUT: list of informations on the driving (time, distance, velocity
 		'''	
+		
+		# ToDo: Any interaction with the timetable?
 		
 		position = 0.0
 		speed = 0.0
@@ -310,7 +391,17 @@ class DriveUnit():
 			if (speedA > speedB):
 				# So we simply divide the section into two parts, we will try to
 				# reach a maximum speed so that we can still safely slow down.
-				speedC, tmpdistance = self.getOutlook(speed, speedB, distance, route, position)
+				
+				#
+				# There is some lost code :-(
+				#
+				if (distance == 500):
+					if (funct == 'A'):
+						speedC, tmpdistance = self.getOutlook(speed, speedB, distance, route, position)
+					else:
+						speedC, tmpdistance = self.getOutlookB(speed, speedB, distance, route, position)
+				else:
+					speedC, tmpdistance = self.getOutlook(speed, speedB, distance, route, position)
 
 				passage += self.motion(route,position,tmpdistance,speed,speedC)
 				position += tmpdistance

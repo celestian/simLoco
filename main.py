@@ -4,6 +4,7 @@
 
 
 import os
+from time import time
 import train.route
 import train.drive
 
@@ -15,8 +16,12 @@ def main():
 
 
 	# There is the simulation core
+	t0 = time()	
 	result = drive_unit.run(route)
+	t1 = time()		
+
 	print ('Travel time is {:g} minute.'.format(result[-1].time/60))
+	print ('Simulation takes {:f}s.'.format(t1-t0))
 
 
 	# We will make some visualization (gnuplot is needed)

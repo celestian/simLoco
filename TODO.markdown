@@ -6,3 +6,6 @@
 * vehicle database
 * tool to build a train
 
+
+
+approximation to the real traction characteristics
