@@ -1,8 +1,11 @@
-#include <cstdio>
+#include "train.hh"
 
-int main (int argc, char* argv[]) {
 
-	printf ("Hello!\n");
+int main(int argc, char **argv) {
+	
+	const char *file = "data/sample_A.route";
+	
+	RailRoute Route(file);
 
 	return 0;
 }
