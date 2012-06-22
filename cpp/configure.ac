@@ -4,7 +4,7 @@
 AC_PREREQ([2.68])
 
 AC_INIT([simLoco_cpp], [0.0.1])
-AC_CONFIG_SRCDIR([src/main.cc])
+AC_CONFIG_SRCDIR([src/test_train.cc])
 AM_INIT_AUTOMAKE
 AC_CONFIG_HEADERS([config.h])
 

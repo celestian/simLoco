@@ -5,6 +5,6 @@ AM_LDFLAGS =
 
 # this lists the binaries to produce, the (non-PHONY, binary) targets in
 # the previous manual Makefile
-bin_PROGRAMS = train
-train_SOURCES = main.cc train.hh train.cc
+bin_PROGRAMS = test_train
+test_train_SOURCES = test_train.cc rail_route.hh rail_route.cc train.hh train.cc
 
