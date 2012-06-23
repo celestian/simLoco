@@ -1,9 +1,8 @@
 #ifndef _RAIL_ROUTE_H_
 #define _RAIL_ROUTE_H_
 
-
 #include <list>
-
+#include <tuple>
 
 class RailRoute
 {
@@ -18,8 +17,8 @@ class RailRoute
 			const double slope;
 		};
 
-		std::list < RouteMark > route;
-
+		std::list<RouteMark> route;
+		std::list<RouteMark>::const_iterator curent_route;
 
 	public:
 
@@ -27,7 +26,11 @@ class RailRoute
 
 		double getSpeedLimit (double position);
 		double getSlope (double position);
-
+		
+		inline void resetSection () { curent_route = route.begin(); }
+		std::tuple <double, double, double> getSection();
+		inline void nextSection () { ++curent_route; }
+		bool isValidSection ();		
 };
 
 #endif // _RAIL_ROUTE_H_

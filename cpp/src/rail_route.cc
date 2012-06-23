@@ -1,5 +1,7 @@
 #include "rail_route.hh"
 
+#include <list>
+#include <tuple>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -37,10 +39,9 @@ RailRoute::RailRoute (const char* filename) {
 	}
 	else cout << "Unable to open file";
 
+	curent_route = route.begin();
+	
 	cout << "Celkem vytvořeno " << route.size() << endl;
-
-
-
 }
 
 double RailRoute::getSpeedLimit (double position) {
@@ -69,5 +70,30 @@ double RailRoute::getSlope (double position) {
 	}
 
 	return slope;
+}
+
+tuple <double, double, double> RailRoute::getSection() {
+
+	double distance, speedA, speedB;
+	std::list<RouteMark>::const_iterator next_iter = curent_route;
+	++next_iter;
+	
+	distance = next_iter->position - curent_route->position;
+	speedA = curent_route->speedlimit;
+	speedB = next_iter->speedlimit;
+	
+	return tuple <double, double, double> {distance, speedA, speedB};
+}
+
+bool RailRoute::isValidSection () {
+	
+	std::list<RouteMark>::const_iterator next_iter = curent_route;
+	++next_iter;
+	
+	if ( next_iter == route.end()) {
+		return false;
+	} else {
+		return true;
+	}
 }
 
