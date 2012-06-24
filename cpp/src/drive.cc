@@ -1,4 +1,4 @@
-#include "train.hh"
+#include "drive.hh"
 #include <cmath>
 #include <tuple>
 #include <cstdio>
@@ -6,7 +6,7 @@
 using namespace std;
 
 
-Train::Train(RailRoute &r): route(r) {
+Drive::Drive(RailRoute &r): route(r) {
 
 	maxspeed = 140;
 	power = 2000;
@@ -21,17 +21,17 @@ Train::Train(RailRoute &r): route(r) {
 	
 }
 
-double Train::adhesion (double velocity) {
+double Drive::adhesion (double velocity) {
 
 	return (7500.0/(fabs(velocity)+44.0) + 161.0)*0.001;
 }
 
-double Train::resistForce (double velocity) {
+double Drive::resistForce (double velocity) {
 
 	return (pow(velocity,2.0)*rho_a + velocity*rho_b + rho_c)*9.81;
 }
 
-double Train::engineForce (double velocity) {
+double Drive::engineForce (double velocity) {
 
 	double U = velocity;
 	if (velocity < 20.0) U = 20.0;
@@ -44,12 +44,12 @@ double Train::engineForce (double velocity) {
 	return (3600 * power * adhesion(velocity))/U;
 }
 
-double Train::brakeForce (double velocity) {
+double Drive::brakeForce (double velocity) {
 
 	return (adhesion(velocity)/0.15) * wcount * 20000;
 }
 
-double Train::eqMotion (double velocity) {
+double Drive::eqMotion (double velocity) {
 		
 	double engine, brake, resist;
 	
@@ -66,7 +66,7 @@ double Train::eqMotion (double velocity) {
 	return (engine - brake - resist) / (1000 * (2.0 * weight + rho_d));
 }
 
-double Train::deltaVelocity (double vA, double dt) {
+double Drive::deltaVelocity (double vA, double dt) {
 		
 	double rkA, rkB, rkC, rkD;
 			
@@ -78,7 +78,7 @@ double Train::deltaVelocity (double vA, double dt) {
 	return (rkA + 2.0*rkB + 2.0*rkC + rkD)*dt/6.0;
 }
 
-void Train::motion (double speedA, double speedB, double distance) {
+void Drive::motion (double speedA, double speedB, double distance) {
 
 	double dt = 0.25;
 	double xA = 0.0;
@@ -115,7 +115,7 @@ void Train::motion (double speedA, double speedB, double distance) {
 	}
 }
 
-double Train::deltaSpeedDistance (double speedA, double speedB) {
+double Drive::deltaSpeedDistance (double speedA, double speedB) {
 		
 	double dt = 1;
 	double vA = speedA;
@@ -143,7 +143,7 @@ double Train::deltaSpeedDistance (double speedA, double speedB) {
 	return xB;
 }
 
-tuple < double, double > Train::getOutlookA (double speedA, double speedB, double distance){
+tuple < double, double > Drive::getOutlookA (double speedA, double speedB, double distance){
 
 	double result_distance;
 	
@@ -170,7 +170,7 @@ tuple < double, double > Train::getOutlookA (double speedA, double speedB, doubl
 	return tuple < double, double > {speedA, 0.0};	
 }
 
-double Train::funct (double CC, double speedA, double speedB, double distance) {
+double Drive::funct (double CC, double speedA, double speedB, double distance) {
 
 	double currentA = deltaSpeedDistance(speedA, CC);
 	double currentB = deltaSpeedDistance(CC, speedB);
@@ -178,7 +178,7 @@ double Train::funct (double CC, double speedA, double speedB, double distance) {
 	return distance - currentA - currentB;
 }
 
-tuple < double, double > Train::getOutlookB (double speedA, double speedB, double distance) {
+tuple < double, double > Drive::getOutlookB (double speedA, double speedB, double distance) {
 
 	double C, fC;
 	double speedlimit = route.getSpeedLimit(position);
@@ -219,7 +219,7 @@ tuple < double, double > Train::getOutlookB (double speedA, double speedB, doubl
 	return tuple < double, double > {speedA, 0.0};
 }
 
-void Train::run () {
+void Drive::run () {
 
 	position = 0.0;
 	double speed = 0.0;

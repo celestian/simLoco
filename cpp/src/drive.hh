@@ -1,11 +1,11 @@
-#ifndef _TRAIN_H_
-#define _TRAIN_H_
+#ifndef _Drive_H_
+#define _Drive_H_
 
 #include <list>
 #include <tuple>
 #include "rail_route.hh"
 
-class Train
+class Drive
 {
 
 	private:
@@ -30,7 +30,7 @@ class Train
 		double lenght;					// [m]
 		double wcount;					// number of wagons
 
-		// ToDo: To determine the parameters directly from the specified train
+		// ToDo: To determine the parameters directly from the specified Drive
 		// (need database)
 
 		//	vehicle		weight [t]	d		a		b		c
@@ -63,8 +63,8 @@ class Train
 
 	public:
 
-		Train(RailRoute &r);
+		Drive(RailRoute &r);
 		void run ();
 };
 
-#endif // _TRAIN_H_
+#endif // _Drive_H_
