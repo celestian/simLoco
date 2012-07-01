@@ -1,4 +1,4 @@
-#!/bin/env python3.2
+#!/usr/bin/env python3.2
 # coding=utf-8
 #
 
@@ -31,9 +31,9 @@ def main():
 		with open('results/sample_A.profile', 'w') as fh:
 			x = 0.0
 			while (route.getSpeedLimit(x) > 0.0):
-				fh.write('{:e}\t{:e}\t{:e}\n'.format(x, route.getSpeedLimit(x), route.getSlope(x) ))
+				fh.write('{:e}\t{:e}\t{:e}\n'.format(x/1000.0, route.getSpeedLimit(x), route.getSlope(x) ))
 				x += 1.0
-			fh.write('{:e}\t{:e}\t{:e}\n'.format(x, route.getSpeedLimit(x), route.getSlope(x) ))
+			fh.write('{:e}\t{:e}\t{:e}\n'.format(x/1000.0, route.getSpeedLimit(x), route.getSlope(x) ))
 	except EnvironmentError as err:
 		print (err)
 
@@ -41,7 +41,7 @@ def main():
 	try:
 		with open('results/sample_A.drive', 'w') as fh:
 			for d in result:
-				fh.write("{:e}\t{:e}\t{:e}\n".format(d.time, d.distance, d.speed))
+				fh.write("{:e}\t{:e}\t{:e}\n".format(d.time, d.distance/1000.0, d.speed))
 	except EnvironmentError as err:
 		print (err)
 	
@@ -53,10 +53,11 @@ def main():
 			fh.write('set terminal "png"\n')
 			fh.write('set output "results/sample_A.png"\n')
 			fh.write('set title "driving profile"\n')
-			fh.write('set xlabel "distance [m]"\n')
-			fh.write('set yrange [0:160]\n')
+			fh.write('set xlabel "distance [km]"\n')
+			fh.write('set yrange [0:200]\n')
+			fh.write('set ytics 0,20\n')
 			fh.write('set ylabel "velocity [km/h]"\n')
-			fh.write('set y2range [-20:140]\n')
+			fh.write('set y2range [-20:180]\n')
 			fh.write('set y2tics 0,10,20\n')
 			fh.write('set y2label "slope [ppt]"\n')
 			fh.write('plot "results/sample_A.profile" u 1:2 w l title "speedlimit", "results/sample_A.drive" u 2:3 w l title "actual speed", "results/sample_A.profile" u 1:3 w l axis x1y2 title "slope"\n')
