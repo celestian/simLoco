@@ -31,6 +31,9 @@ class RailRoute
 		std::tuple <double, double, double> getSection();
 		inline void nextSection () { ++curent_route; }
 		bool isValidSection ();		
+
+		void writeProfile ();		
+		
 };
 
 #endif // _RAIL_ROUTE_H_

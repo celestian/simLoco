@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <cstdio>
 
 
 using namespace std;
@@ -40,8 +41,6 @@ RailRoute::RailRoute (const char* filename) {
 	else cout << "Unable to open file";
 
 	curent_route = route.begin();
-	
-	cout << "Celkem vytvořeno " << route.size() << endl;
 }
 
 double RailRoute::getSpeedLimit (double position) {
@@ -97,3 +96,17 @@ bool RailRoute::isValidSection () {
 	}
 }
 
+void RailRoute::writeProfile () {
+
+	double x = 0.0;
+	FILE * file;
+		
+	file = fopen("results/sample_A.profile", "w");
+
+	while (getSpeedLimit(x) > 0.0) {
+		fprintf(file, "%e\t%e\t%e\n", x/1000.0, getSpeedLimit(x), getSlope(x));
+		x += 1.0;
+	}
+	fprintf(file, "%e\t%e\t%e\n", x/1000.0, getSpeedLimit(x), getSlope(x));
+	fclose (file);
+}
