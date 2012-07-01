@@ -1,7 +1,9 @@
 #include "drive.hh"
 #include <cmath>
+#include <vector>
 #include <tuple>
 #include <cstdio>
+
 
 using namespace std;
 
@@ -21,16 +23,6 @@ Drive::Drive(RailRoute &r): route(r) {
 	
 }
 
-double Drive::adhesion (double velocity) {
-
-	return (7500.0/(fabs(velocity)+44.0) + 161.0)*0.001;
-}
-
-double Drive::resistForce (double velocity) {
-
-	return (pow(velocity,2.0)*rho_a + velocity*rho_b + rho_c)*9.81;
-}
-
 double Drive::engineForce (double velocity) {
 
 	double U = velocity;
@@ -44,12 +36,7 @@ double Drive::engineForce (double velocity) {
 	return (3600 * power * adhesion(velocity))/U;
 }
 
-double Drive::brakeForce (double velocity) {
-
-	return (adhesion(velocity)/0.15) * wcount * 20000;
-}
-
-double Drive::eqMotion (double velocity) {
+double Drive::eqMotion (double velocity, double mode, double position) {
 		
 	double engine, brake, resist;
 	
@@ -61,24 +48,24 @@ double Drive::eqMotion (double velocity) {
 		engine = 0.0;
 		brake = brakeForce(velocity);	
 	}	
-	resist  = resistForce(velocity);// + risistDragForce(route, position);
+	resist  = resistForce(velocity)+ resistSlopeForce(position);
 	
 	return (engine - brake - resist) / (1000 * (2.0 * weight + rho_d));
 }
 
-double Drive::deltaVelocity (double vA, double dt) {
+double Drive::deltaVelocity (double vA, double dt, double mode, double position) {
 		
 	double rkA, rkB, rkC, rkD;
 			
-	rkA = eqMotion (vA);
-	rkB = eqMotion (vA + (0.5 * rkA));
-	rkC = eqMotion (vA + (0.5 * rkB));
-	rkD = eqMotion (vA + rkC);
+	rkA = eqMotion (vA, mode, position);
+	rkB = eqMotion (vA + (0.5 * rkA), mode, position);
+	rkC = eqMotion (vA + (0.5 * rkB), mode, position);
+	rkD = eqMotion (vA + rkC, mode, position);
 
 	return (rkA + 2.0*rkB + 2.0*rkC + rkD)*dt/6.0;
 }
 
-void Drive::motion (double speedA, double speedB, double distance) {
+void Drive::motion (double speedA, double speedB, double distance, double position) {
 
 	double dt = 0.25;
 	double xA = 0.0;
@@ -91,7 +78,7 @@ void Drive::motion (double speedA, double speedB, double distance) {
 		double vB;
 		double xB;
 		while ((xA < distance) and (vA < speedB)) {
-			vB = vA + 3.6 * deltaVelocity(vA, dt);//1, route, position + xA)	# [km/h]
+			vB = vA + 3.6 * deltaVelocity(vA, dt, 1, position + xA);//1, route, )	# [km/h]
 			xB = (dt*vB)/3.6 + xA;												//# [m]
 			vA = vB;
 			xA = xB	;
@@ -103,25 +90,28 @@ void Drive::motion (double speedA, double speedB, double distance) {
 		double vA = speedB;
 		double vB;
 		double xB;
+		vector<DriveMark>::iterator curr_pos = drive.end();
 		drive.push_back( DriveMark(0.0, position + distance, speedB) );
-
+		
 		while ((xA < distance) and (vA < speedA)) {
-			vB = vA + 3.6 * deltaVelocity(vA, -dt);//, vA, -1, route, position + distance - xA)	# [km/h]
+			vB = vA + 3.6 * deltaVelocity(vA, -dt, -1, position + distance - xA);//, vA, -1, route, )	# [km/h]
 			xB = (dt*vB)/3.6 + xA;															//# [m]
 			vA = vB;
 			xA = xB	;
-			drive.push_back(DriveMark(0, position + distance - xA, vB) );
+			
+			curr_pos = drive.insert (curr_pos, DriveMark(0, position + distance - xA, vB));
 		}
 	}
 }
 
-double Drive::deltaSpeedDistance (double speedA, double speedB) {
+double Drive::deltaSpeedDistance (double speedA, double speedB, double position) {
 		
 	double dt = 1;
 	double vA = speedA;
 	double xA = 0.0; 
 	double xB = 0.0;
 	double vB;
+	double mode;
 
 	if (speedA > speedB) {
 		mode = -1;
@@ -134,7 +124,7 @@ double Drive::deltaSpeedDistance (double speedA, double speedB) {
 	}
 
 	while ( (mode * (vA - speedB)) < 0.0 ) {
-		vB = vA + 3.6 * deltaVelocity(vA, dt);//, vA, mode, route, position)	# [km/h]
+		vB = vA + 3.6 * deltaVelocity(vA, dt, mode, position);//, vA, mode, route)	# [km/h]
 		xB = (dt*vB)/3.6 + xA;//											# [m]
 		vA = vB;
 		xA = xB;
@@ -143,13 +133,13 @@ double Drive::deltaSpeedDistance (double speedA, double speedB) {
 	return xB;
 }
 
-tuple < double, double > Drive::getOutlookA (double speedA, double speedB, double distance){
+tuple <double, double> Drive::getOutlookA (double speedA, double speedB, double distance, double position){
 
 	double result_distance;
-	
-	double speedlimit = route.getSpeedLimit(position);
+	double pos = position;
+	double speedlimit = route.getSpeedLimit(pos);
 
-	if (deltaSpeedDistance(speedA, speedB) < distance) {
+	if (deltaSpeedDistance(speedA, speedB, pos) < distance) {
 		double i = 0;
 		double suff_distance = 0.0;
 		double speedC = speedA + i;		
@@ -159,44 +149,45 @@ tuple < double, double > Drive::getOutlookA (double speedA, double speedB, doubl
 			i += 0.2;
 			suff_distance = 0.0;
 			speedC = speedA + i;
-			result_distance = deltaSpeedDistance(speedA, speedC);
-			suff_distance += deltaSpeedDistance(speedC, speedB);
+			result_distance = deltaSpeedDistance(speedA, speedC, pos);
+			suff_distance += deltaSpeedDistance(speedC, speedB, pos);
 			suff_distance += result_distance;
 		}
 		
-		return tuple < double, double > {(speedC-0.2),  result_distance};
+		return tuple <double, double> {(speedC-0.2),  result_distance};
 	}
 
-	return tuple < double, double > {speedA, 0.0};	
+	return tuple <double, double> {speedA, 0.0};	
 }
 
-double Drive::funct (double CC, double speedA, double speedB, double distance) {
+double Drive::funct (double CC, double speedA, double speedB, double distance, double position) {
 
-	double currentA = deltaSpeedDistance(speedA, CC);
-	double currentB = deltaSpeedDistance(CC, speedB);
+	double currentA = deltaSpeedDistance(speedA, CC, position);
+	double currentB = deltaSpeedDistance(CC, speedB, position);
 
 	return distance - currentA - currentB;
 }
 
-tuple < double, double > Drive::getOutlookB (double speedA, double speedB, double distance) {
+tuple <double, double> Drive::getOutlookB (double speedA, double speedB, double distance, double position) {
 
 	double C, fC;
-	double speedlimit = route.getSpeedLimit(position);
+	double pos = distance/2.0 + position;
+	double speedlimit = route.getSpeedLimit(pos);
 
-	if (deltaSpeedDistance(speedA, speedB) < distance) {
+	if (deltaSpeedDistance(speedA, speedB, pos) < distance) {
 
 		double A = speedA;
 		double B = speedlimit;
-		double fA = funct(A, speedA, speedB, distance);
-		double fB = funct(B, speedA, speedB, distance);
+		double fA = funct(A, speedA, speedB, distance, pos);
+		double fB = funct(B, speedA, speedB, distance, pos);
 
 		if (fA * fB < 0) {
 			for (int i=0; i < 200; i++) {
 
 				C = (A + B)/2;
-				fC = funct(C, speedA, speedB, distance);
-				fA = funct(A, speedA, speedB, distance);
-				fB = funct(B, speedA, speedB, distance);
+				fC = funct(C, speedA, speedB, distance, pos);
+				fA = funct(A, speedA, speedB, distance, pos);
+				fB = funct(B, speedA, speedB, distance, pos);
 
 				if (fA * fC > 0.0) {
 					A = C;
@@ -205,80 +196,76 @@ tuple < double, double > Drive::getOutlookB (double speedA, double speedB, doubl
 					B = C;
 				}
 				if (fC == 0.0) {
-					return tuple < double, double > {C, deltaSpeedDistance(speedA, C)};
+					return tuple <double, double> {C, deltaSpeedDistance(speedA, C, pos)};
 				}
 				if (fabs(A - B) < 0.2) {
 					break;
 				}
 			}
-			return tuple < double, double > {(C),  deltaSpeedDistance(speedA, C)};
+			return tuple <double, double> {(C),  deltaSpeedDistance(speedA, C, pos)};
 		} else {
-			return tuple < double, double > {speedA, distance - deltaSpeedDistance(speedA, speedB)};
+			return tuple <double, double> {speedA, distance - deltaSpeedDistance(speedA, speedB, pos)};
 		}
 	}
-	return tuple < double, double > {speedA, 0.0};
+	return tuple <double, double> {speedA, 0.0};
 }
 
 void Drive::run () {
 
-	position = 0.0;
+	double position = 0.0;
 	double speed = 0.0;
-	list <DriveMark> passage;
+	tuple <double, double, double> section;
+	tuple <double, double> look;
 
+	double speedC, tmpdistance, delta_v, delta_distance;
 
-//	list<RailRoute::RouteMark>::const_iterator iter = route.begin();
-//	list<RailRoute::RouteMark>::const_iterator iter_end = route.end();
-
-
-//		void getSection();
-
-	int i = 1;
 	route.resetSection();
 	while (route.isValidSection()) {
 	
-		printf("%d\n", i++);
-		route.nextSection();
-	}
-/*	
-	--iter_end; iter != route.end(); ++iter) {
-		double distance = (iter + 1)->distance - position;
-		double speedA = iter->speedlimit;
-		double speedB = (iter + 1)->speedlimit;
+		section = route.getSection();
+		
+		double distance = get<0>(section); 
+		double speedA = get<1>(section); 
+		double speedB = get<2>(section); 
 
 		if (speedA <= speedB) {
-			passage += motion(speed, speedA, distance);
+			motion(speed, speedA, distance, position);
 			position += distance;
-			speed = passage.end()->speed;
+			speed = drive.back().speed;
 		}
 		else if (speedA > speedB) {
-		
-			if (distance == 500) {
-				if (funct == 'A') {
-					speedC, tmpdistance = getOutlookA(speed, speedB, distance);
-				} else {
-					speedC, tmpdistance = getOutlookB(speed, speedB, distance);
-			} else {
-				speedC, tmpdistance = getOutlookA(speed, speedB, distance);
-			}
-			passage += motion(speed,speedC, tmpdistance);
+			look = getOutlookA(speed, speedB, distance, position);
+			speedC = get<0>(look); 
+			tmpdistance = get<1>(look); 
+
+			motion(speed,speedC, tmpdistance, position);
 			position += tmpdistance;
-			speed = passage[-1].speed;
+			speed = drive.back().speed;
 
-			passage += motion(speed,speedB,distance-tmpdistance);
+			motion(speed,speedB,distance-tmpdistance, position);
 			position += distance - tmpdistance;
-			speed = passage[-1].speed;
+			speed = drive.back().speed;
 		}
+		route.nextSection();
 	}
 
-	iter = route.begin();
-	iter_end = route.end();
-	for (--iter_end; iter != route.end(); ++iter) {
-		delta_v = (passage[i+1].speed - passage[i].speed) / 2.0 + passage[i].speed;
-		delta_distance = passage[i+1].distance - passage[i].distance;
-		passage[i+1].time = math.fabs(2 * delta_distance / delta_v) + passage[i].time;
+	vector<DriveMark>::size_type i;
+	for (i=0; i < (drive.size() - 1); ++i) {
+		delta_v = (drive[i+1].speed - drive[i].speed) / 2.0 + drive[i].speed;
+		delta_distance = drive[i+1].distance - drive[i].distance;
+		drive[i+1].time = fabs(2 * delta_distance / delta_v) + drive[i].time;
 	}
-*/
+
 }
 
-//   get<2>(bar) = 100;    --------------------------------------------------------
+void Drive::writeResults () {
 
+	FILE * file;
+	vector<DriveMark>::size_type i;
+		
+	file = fopen("results/sample_A.drive", "w");
+	for (i=0; i < drive.size(); ++i) {
+		fprintf (file, "%e\t%e\t%e\n", drive[i].time, drive[i].distance/1000.0, drive[i]. speed);	
+	}
+	fclose (file);
+}

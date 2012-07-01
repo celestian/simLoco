@@ -1,28 +1,35 @@
-#ifndef _Drive_H_
-#define _Drive_H_
+#ifndef _DRIVE_H_
+#define _DRIVE_H_
 
-#include <list>
+#include <cmath>
+#include <vector>
 #include <tuple>
 #include "rail_route.hh"
 
+
 class Drive
 {
+
+	public:
+
+		explicit Drive(RailRoute &r);
+		void run ();
+		void writeResults ();
+
 
 	private:
 
 		struct DriveMark {
 			DriveMark(double t, double d, double s) : time(t), distance(d), speed(s) {}
 
-			const double time;			// [s]
-			const double distance;		// [m]
-			const double speed;		// [km/h]
+			double time;				// [s]
+			double distance;			// [m]
+			double speed;				// [km/h]
 		};
 
 		RailRoute &route;
-		std::list < DriveMark > drive;
+		std::vector <DriveMark> drive;
 
-
-	
 		double maxspeed;				// [km/h]
 		double power;					// [kW]
 		double edb;						// [kW]
@@ -43,28 +50,22 @@ class Drive
 		double rho_b;
 		double rho_c;
 		double rho_d;
-
-		int mode;
-		double position;
 	
-		double adhesion (double velocity);
-		double resistForce (double velocity);
+		inline double adhesion (double velocity) { return (7500.0/(fabs(velocity)+44.0) + 161.0)*0.001; }
+		inline double resistForce (double velocity) { return (pow(velocity,2.0)*rho_a + velocity*rho_b + rho_c)*9.81; }
+		inline double resistSlopeForce (double position) { return weight * 9.81 * route.getSlope(position); }
 		double engineForce (double velocity);
-		double brakeForce (double velocity);
+		inline double brakeForce (double velocity) { return (adhesion(velocity)/0.15) * wcount * 20000; }
 		
-		double eqMotion (double velocity);
-		double 	deltaVelocity (double vA, double dt);
-		void motion (double speedA, double speedB, double distance);
+		double eqMotion (double velocity, double mode, double position);
+		double 	deltaVelocity (double vA, double dt, double mode, double position);
+		void motion (double speedA, double speedB, double distance, double position);
 		
-		double deltaSpeedDistance (double speedA, double speedB);
-		std::tuple < double, double > getOutlookA (double speedA, double speedB, double distance);
-		double funct (double CC, double speedA, double speedB, double distance);
-		std::tuple < double, double > getOutlookB (double speedA, double speedB, double distance);
+		double deltaSpeedDistance (double speedA, double speedB, double position);
+		std::tuple <double, double> getOutlookA (double speedA, double speedB, double distance, double position);
+		double funct (double CC, double speedA, double speedB, double distance, double position);
+		std::tuple <double, double> getOutlookB (double speedA, double speedB, double distance, double position);
 
-	public:
-
-		Drive(RailRoute &r);
-		void run ();
 };
 
-#endif // _Drive_H_
+#endif // _DRIVE_H_
