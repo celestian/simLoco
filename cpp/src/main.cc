@@ -3,12 +3,39 @@
 #include <cstdio>
 #include <cstdlib>
  
+/*
+#include <iostream>
+#include <chrono>
+#include <ctime>
+*/
 
 int main(int argc, char **argv) {
 
 	RailRoute route("data/sample_A.route");
 	route.writeProfile ();
 	Drive vlak(route);
+
+/*
+	int i;
+	std::chrono::time_point<std::chrono::system_clock> start, end;
+    start = std::chrono::system_clock::now();
+	for (i=0; i<100; i++) vlak.run();
+    end = std::chrono::system_clock::now();
+    int elapsed_seconds = std::chrono::duration_cast<std::chrono::milliseconds>
+                             (end-start).count();
+    std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+    std::cout << "100 times runA: elapsed time: " << elapsed_seconds << " ms\n";
+
+	vlak.writeResults();
+
+    start = std::chrono::system_clock::now();
+	for (i=0; i<100; i++) vlak.runB();
+    end = std::chrono::system_clock::now();
+    elapsed_seconds = std::chrono::duration_cast<std::chrono::milliseconds>
+                             (end-start).count();
+    end_time = std::chrono::system_clock::to_time_t(end);
+    std::cout << "100 times runB: elapsed time: " << elapsed_seconds << " ms\n";
+*/
 
 	vlak.run();
 	vlak.writeResults();
