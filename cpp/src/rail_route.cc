@@ -1,7 +1,5 @@
 #include "rail_route.hh"
 
-#include <list>
-#include <tuple>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -31,26 +29,22 @@ RailRoute::RailRoute (const char* filename) {
 				pos2 = line.find(' ', pos1+1);
 				speedlimit = stod(line.substr(pos1,pos2-pos1));
 				slope = stod(line.substr(pos2, line.size() - pos2));
-				
-				RouteMark mark (position, speedlimit, slope);
-				route.push_back (mark);
+				route.emplace_back(RouteMark(position, speedlimit, slope));
 			}
 		}
 		file_handler.close();
 	}
 	else cout << "Unable to open file";
-
-	curent_route = route.begin();
 }
 
 double RailRoute::getSpeedLimit (double position) {
 
 	double speed = 0.0;
-	list<RouteMark>::const_iterator iter;
+	vector<RouteMark>::size_type i;
 	
-	for (iter = route.begin(); iter != route.end(); ++iter) {
-		if (iter->position <= position) {
-			speed = iter->speedlimit;
+	for (i=0; i < route.size(); ++i) {
+		if (route[i].position <= position) {
+			speed = route[i].speedlimit;
 		}
 	}
 
@@ -60,40 +54,42 @@ double RailRoute::getSpeedLimit (double position) {
 double RailRoute::getSlope (double position) {
 
 	double slope = 0.0;
-	list<RouteMark>::const_iterator iter;
+	vector<RouteMark>::size_type i;
 	
-	for (iter = route.begin(); iter != route.end(); ++iter) {
-		if (iter->position <= position) {
-			slope = iter->slope;
+	for (i=0; i < route.size(); ++i) {
+		if (route[i].position <= position) {
+			slope = route[i].slope;
 		}
 	}
 
 	return slope;
 }
 
+bool RailRoute::isValidSection () {
+	
+	if ( actual_section + 1 < route.size()) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
 tuple <double, double, double> RailRoute::getSection() {
 
 	double distance, speedA, speedB;
-	std::list<RouteMark>::const_iterator next_iter = curent_route;
-	++next_iter;
+	vector<RouteMark>::size_type i;
 	
-	distance = next_iter->position - curent_route->position;
-	speedA = curent_route->speedlimit;
-	speedB = next_iter->speedlimit;
+	for (i = actual_section + 1; i < route.size(); ++i) {
+		distance = route[i].position - route[actual_section].position;
+		speedA = route[actual_section].speedlimit;
+		speedB = route[i].speedlimit;
+		if (speedA != speedB) {
+			actual_section = i;
+			break;
+		}
+	}
 	
 	return tuple <double, double, double> {distance, speedA, speedB};
-}
-
-bool RailRoute::isValidSection () {
-	
-	std::list<RouteMark>::const_iterator next_iter = curent_route;
-	++next_iter;
-	
-	if ( next_iter == route.end()) {
-		return false;
-	} else {
-		return true;
-	}
 }
 
 void RailRoute::writeProfile () {

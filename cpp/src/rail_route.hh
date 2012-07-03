@@ -1,7 +1,7 @@
 #ifndef _RAIL_ROUTE_H_
 #define _RAIL_ROUTE_H_
 
-#include <list>
+#include <vector>
 #include <tuple>
 
 class RailRoute
@@ -12,13 +12,13 @@ class RailRoute
 		struct RouteMark {
 			RouteMark(double pos, double spl, double slope) : position(pos), speedlimit(spl), slope(slope) {}
 
-			const double position;
-			const double speedlimit;
-			const double slope;
+			double position;
+			double speedlimit;
+			double slope;
 		};
 
-		std::list<RouteMark> route;
-		std::list<RouteMark>::const_iterator curent_route;
+		std::vector<RouteMark> route;
+		std::vector<RouteMark>::size_type actual_section;
 
 	public:
 
@@ -27,10 +27,9 @@ class RailRoute
 		double getSpeedLimit (double position);
 		double getSlope (double position);
 		
-		inline void resetSection () { curent_route = route.begin(); }
-		std::tuple <double, double, double> getSection();
-		inline void nextSection () { ++curent_route; }
-		bool isValidSection ();		
+		bool isValidSection ();
+		void resetSection () { actual_section = 0; }
+		std::tuple <double, double, double> getSection(); /* Warning: This function changes the inner state of object like side effect! */
 
 		void writeProfile ();		
 		
