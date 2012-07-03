@@ -14,6 +14,7 @@ class Drive
 
 		explicit Drive(RailRoute &r);
 		void run ();
+		void runB();
 		void writeResults ();
 
 
@@ -28,7 +29,7 @@ class Drive
 		};
 
 		RailRoute &route;
-		std::vector <DriveMark> drive;
+		std::vector<DriveMark> drive;
 
 		double maxspeed;				// [km/h]
 		double power;					// [kW]
@@ -51,11 +52,11 @@ class Drive
 		double rho_c;
 		double rho_d;
 	
-		inline double adhesion (double velocity) { return (7500.0/(fabs(velocity)+44.0) + 161.0)*0.001; }
-		inline double resistForce (double velocity) { return (pow(velocity,2.0)*rho_a + velocity*rho_b + rho_c)*9.81; }
-		inline double resistSlopeForce (double position) { return weight * 9.81 * route.getSlope(position); }
+		double adhesion (double velocity) { return (7500.0/(fabs(velocity)+44.0) + 161.0)*0.001; }
+		double resistForce (double velocity) { return (pow(velocity,2.0)*rho_a + velocity*rho_b + rho_c)*9.81; }
+		double resistSlopeForce (double position) { return weight * 9.81 * route.getSlope(position); }
 		double engineForce (double velocity);
-		inline double brakeForce (double velocity) { return (adhesion(velocity)/0.15) * wcount * 20000; }
+		double brakeForce (double velocity) { return (adhesion(velocity)/0.15) * wcount * 20000; }
 		
 		double eqMotion (double velocity, double mode, double position);
 		double 	deltaVelocity (double vA, double dt, double mode, double position);

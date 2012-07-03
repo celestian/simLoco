@@ -124,8 +124,8 @@ double Drive::deltaSpeedDistance (double speedA, double speedB, double position)
 	}
 
 	while ( (mode * (vA - speedB)) < 0.0 ) {
-		vB = vA + 3.6 * deltaVelocity(vA, dt, mode, position);//, vA, mode, route)	# [km/h]
-		xB = (dt*vB)/3.6 + xA;//											# [m]
+		vB = vA + 3.6 * deltaVelocity(vA, dt, mode, position);
+		xB = (dt*vB)/3.6 + xA;
 		vA = vB;
 		xA = xB;
 	}
@@ -234,9 +234,16 @@ void Drive::run () {
 			speed = drive.back().speed;
 		}
 		else if (speedA > speedB) {
-			look = getOutlookA(speed, speedB, distance, position);
+			
+			if (distance > deltaSpeedDistance (speedA, speedA + 3, position)) {
+				look = getOutlookB(speed, speedB, distance, position);
+			}
+			else {
+				look = getOutlookA(speed, speedB, distance, position);
+			}
+			
 			speedC = get<0>(look); 
-			tmpdistance = get<1>(look); 
+			tmpdistance = get<1>(look);
 
 			motion(speed,speedC, tmpdistance, position);
 			position += tmpdistance;
@@ -246,7 +253,6 @@ void Drive::run () {
 			position += distance - tmpdistance;
 			speed = drive.back().speed;
 		}
-		route.nextSection();
 	}
 
 	vector<DriveMark>::size_type i;
@@ -257,6 +263,87 @@ void Drive::run () {
 	}
 
 }
+
+void Drive::runB () {
+
+	double dt = 0.25;
+	double position = 0.0;
+//	double speed = 0.0;
+	tuple <double, double, double> section;
+	double speedA, speedB, distance;
+
+	double pos1, pos2;
+	double v, vB;
+	double delta_v, delta_distance;
+
+	tuple <double, double> look;
+	
+	v = 0.0;
+	vector<DriveMark>::iterator iter = drive.end();
+	route.resetSection();
+	while (route.isValidSection()) {
+	
+		section = route.getSection();
+		distance = get<0>(section); 
+		speedA = get<1>(section); 
+		speedB = get<2>(section); 
+
+//		printf("%g\t%g\t%g\n", distance, speedA, speedB);
+
+/*
+		if ( distance > deltaSpeedDistance (speedA, speedB, position) )
+			{ printf ("Máme místo\n");}
+		else
+			{printf ("Nemáme místo\n");}
+*/
+		pos1 = position;
+		pos2 = position + distance;
+		iter = drive.end();
+			
+		if (speedA < speedB ) {
+			while ((pos1 < pos2) and (v <= speedA)){
+				v = v + 3.6 * deltaVelocity(v, dt, 1, pos1);
+				pos1 = (dt*v)/3.6 + pos1;
+				iter = drive.emplace( iter, DriveMark(0, pos1, v) );
+				++iter;				
+			}
+			iter = drive.emplace( iter, DriveMark(0, pos2, v) );
+			++iter;
+		}
+		else {
+			
+			look = getOutlookA(v, speedB, distance, pos1);
+//			speedC = get<0>(look); 
+//			tmpdistance = get<1>(look); 
+			
+			
+			while ((pos1 < pos2) and (v <= get<0>(look))){
+				v = v + 3.6 * deltaVelocity(v, dt, 1, pos1);
+				pos1 = (dt*v)/3.6 + pos1;
+				iter = drive.emplace( iter, DriveMark(0, pos1, v) );
+				++iter;				
+			}
+			vB = speedB;		
+			while ((pos1 < pos2) and (vB <= get<0>(look)) ){
+				vB = vB + 3.6 * deltaVelocity(vB, -dt, -1, pos2);
+				pos2 = -1*(dt*vB)/3.6 + pos2;
+				iter = drive.emplace( iter, DriveMark(0, pos2, vB) );
+//				--iter;
+			}
+			v = speedB;
+		}
+
+		position += distance;
+	}
+
+	vector<DriveMark>::size_type i;
+	for (i=0; i < (drive.size() - 1); ++i) {
+		delta_v = (drive[i+1].speed - drive[i].speed) / 2.0 + drive[i].speed;
+		delta_distance = drive[i+1].distance - drive[i].distance;
+		drive[i+1].time = fabs(2 * delta_distance / delta_v) + drive[i].time;
+	}
+}
+
 
 void Drive::writeResults () {
 
