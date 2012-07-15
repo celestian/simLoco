@@ -10,6 +10,7 @@ class Area
 
 	private:
 
+
 };
 
 #endif // _AREA_H_

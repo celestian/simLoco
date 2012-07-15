@@ -1,5 +1,6 @@
 #include "area.hh"
 #include "area_pattern.hh"
+#include "track.hh"
 #include <cmath>
 #include <iostream>
 #include <fstream>
@@ -10,157 +11,6 @@
 using namespace std;
 using namespace pval;
 
-
-void printMatrix (const vector<string> & matrix) {
-
-	for (auto line : matrix) {
-		std::cout << line << endl;
-	}
-
-}
-
-vector<string> copyMatrix (const vector<string> & matrixA) {
-
-	vector<string> matrixB;
-
-	for (string line : matrixA) {
-		matrixB.push_back (line);
-	}
-
-	return matrixB;
-}
-
-
-bool isTherePattern (const vector<string> & matrix, const int pattern_id) {
-
-	vector<string>::size_type mr, ii;
-	string::size_type mc, jj;
-	int res;
-	
-	vector<string> pattern = make_pattern (pattern_id);
-	vector<string>::size_type pr = pattern.size(); // ToDo: This could be a public method of class pattern
-	string::size_type pc = pattern[0].size();  // ToDo: This could be a public method of class pattern
-	
-	for(mr=0; mr < (matrix.size() - pr); ++mr) {
-		for(mc=0; mc < (matrix[mr].size() - pc); ++mc) {
-		////	
-			for(res=0, ii=0; ii < pr; ++ii) {
-				for(jj=0; jj < pc; ++jj) {
-				////
-					if (pattern[ii][jj] != ' '){
-						if (pattern[ii][jj] != matrix[mr + ii][mc + jj]) {
-							res++;
-						}
-					}										
-				////
-				}
-			}
-		////
-		if (res == 0) return true;
-		}
-	}
-	
-	return false;
-}
-
-tuple<vector<string>::size_type, string::size_type>  findPatternXY (const vector<string> & matrix, const int pattern_id) {
-
-	vector<string>::size_type mr, ii;
-	string::size_type mc, jj;
-	int res;
-	
-	vector<string> pattern = make_pattern (pattern_id);
-	vector<string>::size_type pr = pattern.size(); // ToDo: This could be a public method of class pattern
-	string::size_type pc = pattern[0].size();  // ToDo: This could be a public method of class pattern
-	
-	for(mr=0; mr < (matrix.size() - pr); ++mr) {
-		for(mc=0; mc < (matrix[mr].size() - pc); ++mc) {
-		////	
-			for(res=0, ii=0; ii < pr; ++ii) {
-				for(jj=0; jj < pc; ++jj) {
-				////
-					if (pattern[ii][jj] != ' '){
-						if (pattern[ii][jj] != matrix[mr + ii][mc + jj]) {
-							res++;
-						}
-					}										
-				////
-				}
-			}
-		////
-		if (res == 0) return tuple<int, int> {mr, mc};
-		}
-	}
-	
-	return tuple<int, int> {-1, -1};
-}
-
-vector<string> replacePattern (const vector<string> & matrixA, const int pattern_id_A, const int pattern_id_B, int number) {
-
-	vector<string> matrixB, patternA, patternB, patternC;
-	string line;
-	tuple<vector<string>::size_type, string::size_type> pattern_pos;
-	vector<string>::size_type prB;
-	string::size_type pcA, pcB, i, j;
-
-	pattern_pos = findPatternXY (matrixA, pattern_id_A);
-	patternA = make_pattern (pattern_id_A);
-	patternB = make_pattern (pattern_id_B);
-
-	// vector<string>::size_type prA = patternA.size();
-	pcA = patternA[0].size();
-
-	prB = patternB.size();
-	pcB = patternB[0].size();
-	
-	j = 0;
-	for (auto line : patternB) {
-		if (line.find("xxxx") != string::npos) {
-			line.replace(line.find("xxxx"), 4, to_string(number) );
-		}			
-		patternC.push_back (line);
-	}
-	patternB = copyMatrix (patternC);
-			
-	for (i=0; i < matrixA.size(); ++i) {
-		line.clear();		
-		
-		line = matrixA[i];
-		if ((get<0>(pattern_pos) <= i) and (j < prB)) {
-			line.erase(get<1>(pattern_pos), pcA);
-			line.insert(get<1>(pattern_pos), patternB[j++]);
-		} else {
-			line.insert(get<1>(pattern_pos) + pcA, pcB - pcA, line[get<1>(pattern_pos)]);
-		}
-		matrixB.push_back (line);
-	}
-
-	return matrixB;
-}
-
-vector<string> addWhiteSpace (const vector<string> & matrixA) {
-
-	vector<string> matrixB;
-	string end;
-	string::size_type number = 0;
-	
-	for (string line : matrixA) {
-		number = fmax (number, line.size());
-	}
-
-	for (string line : matrixA) {
-		string lineB = line;
-		if (line.size() < number)
-			lineB.insert (line.size(), number - line.size(), ' ');
-		matrixB.push_back (lineB);
-	}
-
-	end.insert (0, number, ' ');
-	matrixB.push_back (end);
-	matrixB.push_back (end);
-
-	return matrixB;
-}
 
 Area::Area (const char* filename) {
 
@@ -188,35 +38,118 @@ Area::Area (const char* filename) {
 	while ( isTherePattern (matrixA, LEFT_SWITCHES) ) {
 		matrixB = replacePattern (matrixA, LEFT_SWITCHES, LEFT_DECOMP_SWITCHES, junction_number++);
 		matrixA = copyMatrix (matrixB);
-		
-		printMatrix (matrixA);	
 	}
-
+	printMatrix (matrixA);
+	
 	while ( isTherePattern (matrixA, LEFT_SWITCH_A) ) {
 		matrixB = replacePattern (matrixA, LEFT_SWITCH_A, LEFT_DECOMP_SWITCH_A, junction_number++);
 		matrixA = copyMatrix (matrixB);
-		
-		printMatrix (matrixA);
 	}
+	printMatrix (matrixA);
+	
+	while ( isTherePattern (matrixA, LEFT_DOWN_SWITCHES) ) {
+		matrixB = replacePattern (matrixA, LEFT_DOWN_SWITCHES, LEFT_DOWN_DECOMP_SWITCHES, junction_number++);
+		matrixA = copyMatrix (matrixB);
+	}
+	printMatrix (matrixA);
+	
+	while ( isTherePattern (matrixA, LEFT_DOWN_SWITCH_A) ) {
+		matrixB = replacePattern (matrixA, LEFT_DOWN_SWITCH_A, LEFT_DOWN_DECOMP_SWITCH_A, junction_number++);
+		matrixA = copyMatrix (matrixB);
+	}
+	printMatrix (matrixA);
 	
 	while ( isTherePattern (matrixA, RIGHT_SWITCHES) ) {
 		matrixB = replacePattern (matrixA, RIGHT_SWITCHES, RIGHT_DECOMP_SWITCHES, junction_number++);
 		matrixA = copyMatrix (matrixB);
-		
-		for (string line : matrixA) {
-			std::cout << line << endl;
-		}	
 	}
-
+	printMatrix (matrixA);
+	
 	while ( isTherePattern (matrixA, RIGHT_SWITCH_A) ) {
 		matrixB = replacePattern (matrixA, RIGHT_SWITCH_A, RIGHT_DECOMP_SWITCH_A, junction_number++);
 		matrixA = copyMatrix (matrixB);
+	}
+	printMatrix (matrixA);
+	
+	matrixB.clear(); // udělat lépe!
+	// final touch
+	for (auto line : matrixA) {
+		while (line.find("  ") != string::npos) {
+			line.replace(line.find("  "), 2, " ");
+		}
+		while (line.find("}-{") != string::npos) {
+			line.replace(line.find("}-{"), 3, "}{");
+		}
+		while (line.find("--") != string::npos) {
+			line.replace(line.find("--"), 2, "-");
+		}
+		while (line.find("-") != string::npos) {
+			line.replace(line.find("-"), 1, "{d|r:xxxx|d}");
+			line.replace(line.find("xxxx"), 4, to_string(junction_number++)); 
+		}		
 		
-		for (string line : matrixA) {
-			std::cout << line << endl;
-		}	
+		matrixB.push_back (line);
+	}
+	matrixA.clear();
+	matrixA = copyMatrix (matrixB);
+	printMatrix (matrixA);
+	
+	// numbering
+	vector<Track> tracks;
+	vector<int> ids;
+
+	string hmm;
+	for (auto line : matrixA) {
+		string::size_type aa, bb, ii;
+		ids.clear();
+		ids.push_back(0);
+		bb = 0;
+		while (string::npos != line.find_first_of("{", bb)) {
+			aa = line.find_first_of("{", bb);
+			bb = line.find_first_of("}", aa);
+			hmm = line.substr( aa+1, bb-aa-1);
+			Track hmm_track (hmm);
+
+			int isexist = 0;
+			for (auto item : tracks)	{
+				if (hmm_track.getId() == item.getId()) isexist++;
+			}
+			if(isexist == 0) tracks.push_back(hmm_track);
+			ids.push_back (hmm_track.getId());
+		}
+		ids.push_back (0);
+		// directions
+		ii = 0;
+		int pid = 1;
+		while (ii < line.size()) {
+			if (line.at(ii) == '{') {
+				for (auto &item : tracks)	{
+					if (ids[pid] == item.getId()) {
+						if (line.at(ii+1) == 'l') item.back_left = ids[pid-1];
+						if (line.at(ii+1) == 'd') item.back_direct = ids[pid-1];
+						if (line.at(ii+1) == 'r') item.back_right = ids[pid-1];
+
+						if (line.at(ii+10) == 'l') item.forward_left = ids[pid+1];
+						if (line.at(ii+10) == 'd') item.forward_direct = ids[pid+1];
+						if (line.at(ii+10) == 'r') item.forward_right = ids[pid+1];
+					}
+				}
+				//aa = line.find("}", ii+4);
+				ii += 11;
+				++pid;
+			}
+			++ii;	
+		}
 	}
 
-	printMatrix (matrixA);
+
+
+	printf("title\t\t|  id\ttype\tlenght\tBL\tBD\tBR\tFL\tFD\tFR\n");
+	printf("================|====================================================================\n");
+	for(auto item : tracks) {
+		item.print();
+	}
+
+
 }
 
