@@ -2,35 +2,55 @@
 #define _TRACK_H_
 
 #include <string>
-#include <vector>
-#include <iostream>
 
 
 class Track {
 
 	public:
-	
+		
 		Track (const std::string & descp);
-		int getId () { return id; };
-		void print () {	 printf("%s\t|  %i\t%c\t%i\t%i\t%i\t%i\t%i\t%i\t%i\n", title.c_str(), id, type, lenght, back_left, back_direct, back_right, forward_left, forward_direct, forward_right); };
+		virtual void print() {;};
+
+	protected:
+	
+		int id;
+		int type;
+		int lenght;
 		
 		int back_left;
-		int	back_direct;
-		int	back_right;
+		int back_direct;
+		int back_right;
 
-		int	forward_left;
-		int	forward_direct;
+		int forward_left;
+		int forward_direct;
 		int forward_right;
 
+};
 
+
+class Rail : public Track {
+
+	public:
+	
+		Rail (const std::string & descp);
+		virtual void print();
+		
 		
 	private:
-		
-		int id;
-		char type;
-		std::string title;
-		int lenght;
 
+
+};
+
+
+class Junction : public Track {
+
+	public:
+	
+		Junction (const std::string & descp);
+		virtual void print();
+	
+	
+	private:
 
 
 };

@@ -1,25 +1,46 @@
-#ifndef _TRACK_ELEMENT_GUI_H_
-#define _TRACK_ELEMENT_GUI_H_
+#ifndef _GUI_TRACK_H_
+#define _GUI_TRACK_H_
 
-#include <string>
-#include <vector>
+#include <cluttermm.h>
 
 
-class TrackElement {
+class TrackGUI {
 
 	public:
 	
-		TrackElement (const std::string & element);
+		TrackGUI (int _id, float _x, float _y);
 
 		
-	private:
+	protected:
 		
 		int id;
-		char type;
-		std::string title;
-		int lenght;
-
+		float x;
+		float y;
+		
 };
 
-#endif // _TRACK_ELEMENT_GUI_H_
+
+class RailGUI : public TrackGUI {
+
+	public:
+		
+		RailGUI (int _id, float _x, float _y, int _xsize);
+		void show (const Glib::RefPtr<Clutter::Stage> stage);
+	
+	private:
+	
+		int xsize;
+};
+
+
+class JunctionGUI : public TrackGUI {
+
+	public:
+		
+		JunctionGUI (int _id, float _x, float _y);
+		void show (const Glib::RefPtr<Clutter::Stage> stage);
+		
+};
+
+#endif // _GUI_TRACK_H_
 
